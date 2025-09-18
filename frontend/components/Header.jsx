@@ -1,38 +1,52 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState } from "react";
 
-const Header = ({ setCurrentPage, cartCount, currentUser, setShowLoginModal, handleLogout, handleSearch }) => {
-  const [searchInput, setSearchInput] = useState("")
-  const [showMenu, setShowMenu] = useState(false)
+const Header = ({
+  setCurrentPage,
+  cartCount,
+  currentUser,
+  setShowLoginModal,
+  handleLogout,
+  handleSearch,
+}) => {
+  const [searchInput, setSearchInput] = useState("");
+  const [showMenu, setShowMenu] = useState(false);
 
   const handleSearchSubmit = (e) => {
-    e.preventDefault()
+    e.preventDefault();
     if (searchInput.trim()) {
-      handleSearch(searchInput.trim())
+      handleSearch(searchInput.trim());
     }
-  }
+  };
 
   const handleAccountClick = () => {
-    setShowMenu((prev) => !prev)
-  }
+    setShowMenu((prev) => !prev);
+  };
 
   const handleCartClick = () => {
     if (currentUser) {
-      setCurrentPage("cart")
+      setCurrentPage("cart");
     } else if (typeof setShowLoginModal === "function") {
-      setShowLoginModal(true)
+      setShowLoginModal(true);
     }
-  }
+  };
 
   return (
     <header className="bg-white shadow-sm">
       {/* Main header */}
-      <div className="max-w-7xl mx-10 px-4 py-4">
+      <div className="max-w-7xl mx-7 px-4 py-4">
         <div className="flex items-center justify-between gap-4">
           {/* Logo */}
-          <div className="flex items-center cursor-pointer" onClick={() => setCurrentPage("home")}>
-            <img src="/logo.jpg" alt="BookHaven" className="object-contain scale-125" />
+          <div
+            className="flex items-center cursor-pointer"
+            onClick={() => setCurrentPage("home")}
+          >
+            <img
+              src="/logo.jpg"
+              alt="BookHaven"
+              className="object-contain scale-125 "
+            />
           </div>
 
           {/* Search */}
@@ -40,7 +54,9 @@ const Header = ({ setCurrentPage, cartCount, currentUser, setShowLoginModal, han
             <form onSubmit={handleSearchSubmit} className="w-full">
               <div className="flex h-10 rounded-md overflow-hidden border border-red-600 bg-white">
                 <div className="relative flex-1">
-                  <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">🔍</span>
+                  <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">
+                    🔍
+                  </span>
                   <input
                     type="text"
                     placeholder="Tìm kiếm sách, tác giả..."
@@ -108,8 +124,8 @@ const Header = ({ setCurrentPage, cartCount, currentUser, setShowLoginModal, han
                     {!currentUser && (
                       <button
                         onClick={() => {
-                          setShowMenu(false)
-                          setShowLoginModal(true)
+                          setShowMenu(false);
+                          setShowLoginModal(true);
                         }}
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
@@ -120,17 +136,21 @@ const Header = ({ setCurrentPage, cartCount, currentUser, setShowLoginModal, han
                       <>
                         <button
                           onClick={() => {
-                            setShowMenu(false)
-                            setCurrentPage(currentUser.role==="admin" ? "admin" : "account")
+                            setShowMenu(false);
+                            setCurrentPage(
+                              currentUser.role === "admin" ? "admin" : "account"
+                            );
                           }}
                           className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
-                          {currentUser.role==="admin" ? "Quản trị" : "Tài khoản"}
+                          {currentUser.role === "admin"
+                            ? "Quản trị"
+                            : "Tài khoản"}
                         </button>
                         <button
                           onClick={() => {
-                            setShowMenu(false)
-                            handleLogout()
+                            setShowMenu(false);
+                            handleLogout();
                           }}
                           className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         >
@@ -178,7 +198,7 @@ const Header = ({ setCurrentPage, cartCount, currentUser, setShowLoginModal, han
         </div>
       </div>
     </header>
-  )
-}
+  );
+};
 
-export default Header
+export default Header;
