@@ -19,7 +19,10 @@ const CategoriesTab = ({ categories, addCategory, updateCategory, deleteCategory
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Quản lý danh mục sản phẩm</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Danh sách danh mục</h2>
+          <p className="text-gray-600 mt-1">Tổng: {categories.length} danh mục</p>
+        </div>
         <button onClick={() => setShowForm(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Thêm danh mục</button>
       </div>
 

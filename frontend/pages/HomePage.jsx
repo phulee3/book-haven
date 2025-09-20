@@ -21,7 +21,7 @@ const HomePage = ({
   const comboProducts = products.filter((p) => /combo/i.test(p.title))
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <Header
         setCurrentPage={setCurrentPage}
         cartCount={cartCount}
@@ -32,11 +32,11 @@ const HomePage = ({
       />
       <Banner />
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8 bg-white">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left column: New Arrivals list (5 items, vertical) */}
           <div className="rounded-lg px-3 sm:px-4"> {/* Xóa pt-3 sm:pt-4 để bỏ padding trên cùng */}
-          <div className="relative"> {/* Xóa mb-4 để bỏ margin dưới */}
+            <div className="relative"> {/* Xóa mb-4 để bỏ margin dưới */}
               <div className="relative mb-4">
                 <div className="absolute inset-0 h-8 bg-red-700"></div>
                 <h2 className="relative z-10 text-white uppercase text-sm sm:text-base h-8 flex items-center px-3">🆕 SÁCH MỚI LÊN KỆ</h2>

@@ -1,64 +1,39 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Toaster } from "react-hot-toast"
+
+// Pages
 import HomePage from "./pages/HomePage"
 import CartPage from "./pages/CartPage"
 import CheckoutPage from "./pages/CheckoutPage"
 import AdminPage from "./pages/AdminPage"
 import CategoriesPage from "./pages/CategoriesPage"
 import AccountPage from "./pages/AccountPage"
+
+// Components
 import { LoginModal } from "./components/modals/LoginModal"
+import { AddToCartModal } from "./components/modals/AddToCartModal"
+import { PageRouter } from "./components/common/PageRouter"
+
+// Hooks
 import { useAuth } from "./hooks/useAuth"
 import { useCart } from "./hooks/useCart"
+import { useCategories } from "./hooks/useCategories"
+import { useOrders } from "./hooks/useOrders"
 
 function App() {
   const [currentPage, setCurrentPage] = useState("home")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState(null)
-  const [orders, setOrders] = useState([])
-  const [categories, setCategories] = useState([
-    { id: 1, name: "Sách thiếu nhi" },
-    { id: 2, name: "Sách giáo dục" },
-    { id: 3, name: "Sách kỹ năng sống" },
-    { id: 4, name: "Truyện cổ tích" },
-  ])
 
-  // Use custom hooks
-  const {
-    currentUser,
-    setCurrentUser,
-    showLoginModal,
-    setShowLoginModal,
-    showRegister,
-    setShowRegister,
-    users,
-    setUsers,
-    handleLogin: authLogin,
-    handleRegister: authRegister,
-    handleLogout: authLogout,
-  } = useAuth()
+  // Custom hooks
+  const auth = useAuth()
+  const cart = useCart()
+  const { categories, addCategory, updateCategory, deleteCategory } = useCategories()
+  const { orders, addOrder, updateOrderStatus, createOrder } = useOrders()
 
-  const {
-    cart,
-    setCart,
-    showAddToCartModal,
-    setShowAddToCartModal,
-    selectedProduct,
-    selectedQuantity,
-    setSelectedQuantity,
-    showNotification,
-    addToCart,
-    confirmAddToCart,
-    removeFromCart,
-    removeSelectedFromCart,
-    updateQuantity,
-    toggleItemSelection,
-    getTotalPrice,
-    getCartCount,
-    getSelectedCount,
-  } = useCart()
-
-  // Scroll to top on navigating to Categories page
+  // Scroll to top when navigating to Categories page
   useEffect(() => {
     if (currentPage === "categories") {
       try {
@@ -69,19 +44,7 @@ function App() {
     }
   }, [currentPage])
 
-  // Wrapper functions to handle page navigation
-  const handleLogin = (email, password) => {
-    return authLogin(email, password, setCurrentPage)
-  }
-
-  const handleRegister = (newUserData) => {
-    return authRegister(newUserData)
-  }
-
-  const handleLogout = () => {
-    authLogout(setCurrentPage)
-  }
-
+  // Navigation handlers
   const handleSearch = (query) => {
     setSearchQuery(query)
     setCurrentPage("categories")
@@ -92,275 +55,151 @@ function App() {
     setCurrentPage("categories")
   }
 
-  // Order management functions
-  const createOrder = (orderData) => {
-    const selectedItems = cart.filter((item) => item.selected)
-    const newOrder = {
-      id: Date.now(),
+  // Enhanced order creation with cart integration
+  const handleCreateOrder = (orderData) => {
+    const selectedItems = cart.cart.filter((item) => item.selected)
+    const newOrder = createOrder({
       ...orderData,
       items: selectedItems,
-      total: getTotalPrice(),
-      status: "Pending",
-      createdAt: new Date().toISOString(),
-    }
-    setOrders([...orders, newOrder])
-    setCart(cart.filter((item) => !item.selected))
+      total: cart.getTotalPrice(),
+    })
+
+    // Remove selected items from cart
+    cart.setCart(cart.cart.filter((item) => !item.selected))
     return newOrder
   }
 
-  const updateOrderStatus = (orderId, status) => {
-    setOrders(orders.map((order) => (order.id === orderId ? { ...order, status } : order)))
-  }
+  // Page props factory
+  const getCommonProps = () => ({
+    setCurrentPage,
+    currentUser: auth.currentUser,
+    setShowLoginModal: auth.setShowLoginModal,
+    handleLogout: auth.handleLogout,
+    handleSearch,
+    cartCount: cart.getCartCount(),
+  })
 
-  const addUser = (userData) => {
-    const newUser = { id: Date.now(), ...userData, role: "user" }
-    setUsers([...users, newUser])
-  }
+  const pageProps = {
+    home: {
+      ...getCommonProps(),
+      addToCart: (product) => cart.addToCart(product, auth.currentUser, auth.setShowLoginModal),
+      navigateToCategory,
+      categories,
+    },
 
-  const updateUser = (userId, userData) => {
-    setUsers(users.map((user) => (user.id === userId ? { ...user, ...userData } : user)))
-  }
+    cart: {
+      ...getCommonProps(),
+      cart: cart.cart,
+      removeFromCart: cart.removeFromCart,
+      removeSelectedFromCart: cart.removeSelectedFromCart,
+      updateQuantity: cart.updateQuantity,
+      toggleItemSelection: cart.toggleItemSelection,
+      getTotalPrice: cart.getTotalPrice,
+      getSelectedCount: cart.getSelectedCount,
+    },
 
-  const deleteUser = (userId) => {
-    setUsers(users.filter((user) => user.id !== userId))
-  }
+    checkout: {
+      ...getCommonProps(),
+      cart: cart.cart.filter((item) => item.selected),
+      getTotalPrice: cart.getTotalPrice,
+      createOrder: handleCreateOrder,
+    },
 
-  const addCategory = (categoryData) => {
-    const newCategory = { id: Date.now(), ...categoryData }
-    setCategories([...categories, newCategory])
-  }
+    categories: {
+      ...getCommonProps(),
+      addToCart: (product) => cart.addToCart(product, auth.currentUser, auth.setShowLoginModal),
+      categories,
+      searchQuery,
+      selectedCategory,
+      setSelectedCategory,
+    },
 
-  const updateCategory = (categoryId, categoryData) => {
-    setCategories(
-      categories.map((category) => (category.id === categoryId ? { ...category, ...categoryData } : category)),
-    )
-  }
+    account: {
+      ...getCommonProps(),
+      updateUser: auth.updateUser,
+      deleteUser: (id) => {
+        auth.setUsers(auth.users.filter((u) => u.id !== id))
+        if (auth.currentUser?.id === id) auth.setCurrentUser(null)
+        setCurrentPage("home")
+      },
+      handleLogout: () => {
+        auth.handleLogout()
+        setCurrentPage("home")
+      },
+    },
 
-  const deleteCategory = (categoryId) => {
-    setCategories(categories.filter((category) => category.id !== categoryId))
-  }
-
-  const addOrder = (orderData) => {
-    const newOrder = {
-      id: Date.now(),
-      ...orderData,
-      status: "Pending",
-      createdAt: new Date().toISOString(),
-    }
-    setOrders([...orders, newOrder])
-  }
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case "home":
-        return (
-          <HomePage
-            setCurrentPage={setCurrentPage}
-            addToCart={(product) => addToCart(product, currentUser, setShowLoginModal)}
-            cartCount={getCartCount()}
-            currentUser={currentUser}
-            setShowLoginModal={setShowLoginModal}
-            handleLogout={handleLogout}
-            handleSearch={handleSearch}
-            navigateToCategory={navigateToCategory}
-            categories={categories}
-          />
-        )
-      case "cart":
-        return (
-          <CartPage
-            setCurrentPage={setCurrentPage}
-            cart={cart}
-            removeFromCart={removeFromCart}
-            removeSelectedFromCart={removeSelectedFromCart}
-            updateQuantity={updateQuantity}
-            toggleItemSelection={toggleItemSelection}
-            getTotalPrice={getTotalPrice}
-            getSelectedCount={getSelectedCount}
-            currentUser={currentUser}
-            setShowLoginModal={setShowLoginModal}
-            handleLogout={handleLogout}
-            handleSearch={handleSearch}
-          />
-        )
-      case "checkout":
-        return (
-          <CheckoutPage
-            setCurrentPage={setCurrentPage}
-            cart={cart.filter((item) => item.selected)}
-            getTotalPrice={getTotalPrice}
-            createOrder={createOrder}
-            currentUser={currentUser}
-            setShowLoginModal={setShowLoginModal}
-            handleLogout={handleLogout}
-            handleSearch={handleSearch}
-          />
-        )
-      case "categories":
-        return (
-          <CategoriesPage
-            setCurrentPage={setCurrentPage}
-            addToCart={(product) => addToCart(product, currentUser, setShowLoginModal)}
-            cartCount={getCartCount()}
-            currentUser={currentUser}
-            setShowLoginModal={setShowLoginModal}
-            handleLogout={handleLogout}
-            handleSearch={handleSearch}
-            categories={categories}
-            searchQuery={searchQuery}
-            selectedCategory={selectedCategory}
-            setSelectedCategory={setSelectedCategory}
-          />
-        )
-      case "account":
-        if (!currentUser) {
-          return (
-            <HomePage
-              setCurrentPage={setCurrentPage}
-              addToCart={(product) => addToCart(product, currentUser, setShowLoginModal)}
-              cartCount={getCartCount()}
-              currentUser={currentUser}
-              setShowLoginModal={setShowLoginModal}
-              handleLogout={handleLogout}
-              handleSearch={handleSearch}
-              navigateToCategory={navigateToCategory}
-              categories={categories}
-            />
-          )
-        }
-        return (
-          <AccountPage
-            setCurrentPage={setCurrentPage}
-            currentUser={currentUser}
-            updateUser={updateUser}
-            deleteUser={(id) => {
-              setUsers(users.filter((u) => u.id !== id))
-              if (currentUser?.id === id) setCurrentUser(null)
-              setCurrentPage("home")
-            }}
-            handleLogout={() => {
-              handleLogout()
-              setCurrentPage("home")
-            }}
-          />
-        )
-      case "admin":
-        if (!currentUser || currentUser.role !== "admin") {
-          return (
-            <HomePage
-              setCurrentPage={setCurrentPage}
-              addToCart={(product) => addToCart(product, currentUser, setShowLoginModal)}
-              cartCount={getCartCount()}
-              currentUser={currentUser}
-              setShowLoginModal={setShowLoginModal}
-              handleLogout={handleLogout}
-              handleSearch={handleSearch}
-              navigateToCategory={navigateToCategory}
-              categories={categories}
-            />
-          )
-        }
-        return (
-          <AdminPage
-            setCurrentPage={setCurrentPage}
-            orders={orders}
-            updateOrderStatus={updateOrderStatus}
-            addOrder={addOrder}
-            users={users}
-            addUser={addUser}
-            updateUser={updateUser}
-            deleteUser={deleteUser}
-            categories={categories}
-            addCategory={addCategory}
-            updateCategory={updateCategory}
-            deleteCategory={deleteCategory}
-            currentUser={currentUser}
-            handleLogout={handleLogout}
-          />
-        )
-      default:
-        return (
-          <HomePage
-            setCurrentPage={setCurrentPage}
-            addToCart={(product) => addToCart(product, currentUser, setShowLoginModal)}
-            cartCount={getCartCount()}
-            currentUser={currentUser}
-            setShowLoginModal={setShowLoginModal}
-            handleLogout={handleLogout}
-            handleSearch={handleSearch}
-            navigateToCategory={navigateToCategory}
-            categories={categories}
-          />
-        )
-    }
+    admin: {
+      ...getCommonProps(),
+      orders,
+      updateOrderStatus,
+      addOrder,
+      users: auth.users,
+      addUser: auth.addUser,
+      updateUser: auth.updateUser,
+      deleteUser: auth.deleteUser,
+      categories,
+      addCategory,
+      updateCategory,
+      deleteCategory,
+    },
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {renderPage()}
-
-      <LoginModal
-        showLoginModal={showLoginModal}
-        setShowLoginModal={setShowLoginModal}
-        showRegister={showRegister}
-        setShowRegister={setShowRegister}
-        handleLogin={handleLogin}
-        handleRegister={handleRegister}
+      <PageRouter
+        currentPage={currentPage}
+        pageProps={pageProps}
+        currentUser={auth.currentUser}
       />
 
-      {showAddToCartModal && (
-        <div className="fixed inset-0 bg-black/10 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Thêm vào giỏ hàng</h3>
-            {selectedProduct && (
-              <div className="mb-4">
-                <img
-                  src={selectedProduct.image || "/placeholder.svg"}
-                  alt={selectedProduct.title}
-                  className="w-20 h-20 object-cover rounded mb-2"
-                />
-                <h4 className="font-medium">{selectedProduct.title}</h4>
-                <p className="text-red-600 font-semibold">{selectedProduct.price.toLocaleString()}đ</p>
-              </div>
-            )}
-            <div className="flex items-center justify-center space-x-4 mb-6">
-              <button
-                onClick={() => setSelectedQuantity(Math.max(1, selectedQuantity - 1))}
-                className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
-              >
-                -
-              </button>
-              <span className="text-lg font-medium w-8 text-center">{selectedQuantity}</span>
-              <button
-                onClick={() => setSelectedQuantity(selectedQuantity + 1)}
-                className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
-              >
-                +
-              </button>
-            </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowAddToCartModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={confirmAddToCart}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-              >
-                Xác nhận
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modals */}
+      <LoginModal
+        showLoginModal={auth.showLoginModal}
+        setShowLoginModal={auth.setShowLoginModal}
+        showRegister={auth.showRegister}
+        setShowRegister={auth.setShowRegister}
+        handleLogin={(email, password) => auth.handleLogin(email, password, setCurrentPage)}
+        handleRegister={auth.handleRegister}
+      />
 
-      {showNotification && (
-        <div className="fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50">
-          Đã thêm vào giỏ hàng
-        </div>
-      )}
+      <AddToCartModal
+        showModal={cart.showAddToCartModal}
+        setShowModal={cart.setShowAddToCartModal}
+        selectedProduct={cart.selectedProduct}
+        selectedQuantity={cart.selectedQuantity}
+        setSelectedQuantity={cart.setSelectedQuantity}
+        confirmAddToCart={cart.confirmAddToCart}
+      />
+
+      {/* Toast Notifications */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#10B981',
+            color: '#fff',
+            fontSize: '14px',
+            borderRadius: '8px',
+            padding: '12px 16px',
+          },
+          success: {
+            iconTheme: {
+              primary: '#fff',
+              secondary: '#10B981',
+            },
+          },
+          error: {
+            style: {
+              background: '#EF4444',
+            },
+            iconTheme: {
+              primary: '#fff',
+              secondary: '#EF4444',
+            },
+          },
+        }}
+      />
     </div>
   )
 }

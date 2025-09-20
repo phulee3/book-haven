@@ -7,7 +7,7 @@ const UsersTab = ({ users, addUser, updateUser, deleteUser }) => {
   const [currentPage, setCurrentPage] = useState(1)
   const [showUserForm, setShowUserForm] = useState(false)
   const [editingUser, setEditingUser] = useState(null)
-  const [userForm, setUserForm] = useState({ name: "", email: "", phone: "", province: "", district: "", ward: "", address: "" })
+  const [userForm, setUserForm] = useState({ name: "", email: "", phone: "", province: "", district: "", ward: "", address: "", password: "" })
   const itemsPerPage = 5
 
   const paginate = (items) => items.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
@@ -15,23 +15,41 @@ const UsersTab = ({ users, addUser, updateUser, deleteUser }) => {
 
   const startEditUser = (user) => {
     setEditingUser(user)
-    setUserForm({ name: user.name, email: user.email, phone: user.phone, province: user.province || "", district: user.district || "", ward: user.ward || "", address: user.address || "" })
+    setUserForm({
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      province: user.province || "",
+      district: user.district || "",
+      ward: user.ward || "",
+      address: user.address || "",
+      password: "" // Không hiển thị mật khẩu cũ, chỉ nhập mới nếu muốn đổi
+    })
     setShowUserForm(true)
   }
 
   const handleUserSubmit = (e) => {
     e.preventDefault()
-    if (editingUser) updateUser(editingUser.id, userForm)
-    else addUser(userForm)
+    // Nếu đang sửa mà không nhập mật khẩu mới thì không gửi trường password
+    const submitData = { ...userForm }
+    if (editingUser && !userForm.password) {
+      delete submitData.password
+    }
+    if (editingUser) updateUser(editingUser.id, submitData)
+    else addUser(submitData)
     setShowUserForm(false)
     setEditingUser(null)
-    setUserForm({ name: "", email: "", phone: "", province: "", district: "", ward: "", address: "" })
+    setUserForm({ name: "", email: "", phone: "", province: "", district: "", ward: "", address: "", password: "" })
   }
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Quản lý người dùng</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Danh sách người dùng</h2>
+          <p className="text-gray-600 mt-1">Tổng: {paginate.length} người dùng</p>
+        </div>
+
         <button onClick={() => setShowUserForm(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Thêm người dùng</button>
       </div>
 
@@ -82,6 +100,14 @@ const UsersTab = ({ users, addUser, updateUser, deleteUser }) => {
               <input type="text" placeholder="Huyện" value={userForm.district} onChange={(e) => setUserForm({ ...userForm, district: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded" required />
               <input type="text" placeholder="Xã" value={userForm.ward} onChange={(e) => setUserForm({ ...userForm, ward: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded" required />
               <input type="text" placeholder="Địa chỉ cụ thể" value={userForm.address} onChange={(e) => setUserForm({ ...userForm, address: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded" required />
+              <input
+                type="password"
+                placeholder={editingUser ? "Mật khẩu mới (bỏ trống nếu không đổi)" : "Mật khẩu"}
+                value={userForm.password}
+                onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded"
+                required={!editingUser}
+              />
               <div className="flex space-x-3">
                 <button type="button" onClick={() => { setShowUserForm(false); setEditingUser(null); }} className="flex-1 px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">Hủy</button>
                 <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">{editingUser ? "Cập nhật" : "Thêm"}</button>
