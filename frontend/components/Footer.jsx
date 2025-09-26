@@ -6,13 +6,15 @@ const Footer = () => {
 
           {/* Logo and Contact */}
           <div>
-            <div className="mb-6">
+            <div className="mb-6 h-50 w-[auto] overflow-hidden relative">
               <img
-                src="/logo.jpg"
+                src="/BookHaven (1).png"
                 alt="BookHaven"
-                className="h-30 w-auto bg-pink-100 mix-blend-multiply"
+                className="absolute inset-0 w-full h-full object-contain scale-[1.25] mix-blend-multiply origin-center"
+                draggable="false"
               />
             </div>
+
             <div className="space-y-3 text-sm ml-5">
               <div className="flex items-center space-x-3 mb-4">
                 <img src="/whatsapp-icon.png" alt="WhatsApp" className="w-5 h-5" />
@@ -121,13 +123,13 @@ const Footer = () => {
           <div>
             <h3 className="font-bold uppercase mb-4 text-lg">MẠNG XÃ HỘI</h3>
             <div className="flex space-x-3 mb-6">
-              <a href="#" className="flex items-center justify-center w-10 h-10 rounded bg-pink-100 hover:opacity-80 transition-opacity">
+              <a href="https://www.facebook.com/phulee.9.10/" className="flex items-center justify-center w-10 h-10 rounded bg-pink-100 hover:opacity-80 transition-opacity">
                 <img src="/facebook-icon.png" alt="Facebook" className="w-6 h-6 mix-blend-multiply" />
               </a>
-              <a href="#" className="flex items-center justify-center w-10 h-10 rounded bg-pink-100 hover:opacity-80 transition-opacity">
+              <a href="https://www.tiktok.com/@nwphus" className="flex items-center justify-center w-10 h-10 rounded bg-pink-100 hover:opacity-80 transition-opacity">
                 <img src="/tiktok-icon.png" alt="TikTok" className="w-8 h-8 mix-blend-multiply" />
               </a>
-              <a href="#" className="flex items-center justify-center w-10 h-10 rounded bg-pink-100 hover:opacity-80 transition-opacity">
+              <a href="https://www.instagram.com/phu_lee_/" className="flex items-center justify-center w-10 h-10 rounded bg-pink-100 hover:opacity-80 transition-opacity">
                 <img src="/instagram-icon.png" alt="Instagram" className="w-6 h-6 mix-blend-multiply" />
               </a>
             </div>

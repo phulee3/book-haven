@@ -1,20 +1,52 @@
 "use client"
 
 import { useMemo } from "react"
+import { useNavigate } from "react-router-dom"
+import { useAppContext } from "../../contexts/AppContext"
 
-const DashboardTab = ({ orders, users, categories }) => {
+const DashboardTab = () => {
+    const { orders, users, categories, products } = useAppContext()
+    const navigate = useNavigate()
+
     const stats = useMemo(() => {
         const totalOrders = orders?.length || 0
         const totalUsers = users?.length || 0
         const totalCategories = categories?.length || 0
+        const totalProducts = products?.length || 0
 
+        // Cập nhật logic tính doanh thu - chỉ tính các đơn hàng "completed"
         const totalRevenue = orders?.reduce((sum, order) => {
-            return order.status === "Completed" ? sum + (order.total || 0) : sum
+            const status = (order.status || "").toLowerCase()
+            return (status === "completed" || status === "delivered")
+                ? sum + (Number(order.total) || 0)
+                : sum
         }, 0) || 0
 
-        const pendingOrders = orders?.filter(order => order.status === "Pending").length || 0
-        const processingOrders = orders?.filter(order => order.status === "Processing").length || 0
-        const completedOrders = orders?.filter(order => order.status === "Completed").length || 0
+        // Cập nhật thống kê trạng thái đơn hàng
+        const pendingOrders = orders?.filter(order => {
+            const status = (order.status || "").toLowerCase()
+            return status === "pending"
+        }).length || 0
+
+        const processingOrders = orders?.filter(order => {
+            const status = (order.status || "").toLowerCase()
+            return status === "processing"
+        }).length || 0
+
+        const shippedOrders = orders?.filter(order => {
+            const status = (order.status || "").toLowerCase()
+            return status === "shipped"
+        }).length || 0
+
+        const completedOrders = orders?.filter(order => {
+            const status = (order.status || "").toLowerCase()
+            return status === "completed" || status === "delivered"
+        }).length || 0
+
+        const cancelledOrders = orders?.filter(order => {
+            const status = (order.status || "").toLowerCase()
+            return status === "cancelled"
+        }).length || 0
 
         // Recent orders (last 5)
         const recentOrders = orders?.slice(0, 5) || []
@@ -23,13 +55,16 @@ const DashboardTab = ({ orders, users, categories }) => {
             totalOrders,
             totalUsers,
             totalCategories,
+            totalProducts,
             totalRevenue,
             pendingOrders,
             processingOrders,
+            shippedOrders,
             completedOrders,
+            cancelledOrders,
             recentOrders
         }
-    }, [orders, users, categories])
+    }, [orders, users, categories, products])
 
     const formatPrice = (price) => {
         return new Intl.NumberFormat("vi-VN").format(price) + "đ"
@@ -77,24 +112,55 @@ const DashboardTab = ({ orders, users, categories }) => {
             bgColor: "bg-purple-50"
         },
         {
-            title: "Danh mục",
-            value: stats.totalCategories,
+            title: "Sản phẩm",
+            value: stats.totalProducts,
+            icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253",
+            color: "bg-indigo-500",
+            bgColor: "bg-indigo-50"
+        }
+    ]
+
+    const quickActions = [
+        {
+            title: "Thêm đơn hàng",
+            path: "/admin/orders",
+            icon: "M12 6v6m0 0v6m0-6h6m-6 0H6",
+            color: "bg-blue-50 hover:bg-blue-100",
+            textColor: "text-blue-700"
+        },
+        {
+            title: "Thêm người dùng",
+            path: "/admin/users",
+            icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z",
+            color: "bg-green-50 hover:bg-green-100",
+            textColor: "text-green-700"
+        },
+        {
+            title: "Thêm sản phẩm",
+            path: "/admin/products",
+            icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253",
+            color: "bg-purple-50 hover:bg-purple-100",
+            textColor: "text-purple-700"
+        },
+        {
+            title: "Thêm danh mục",
+            path: "/admin/categories",
             icon: "M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z",
-            color: "bg-orange-500",
-            bgColor: "bg-orange-50"
+            color: "bg-orange-50 hover:bg-orange-100",
+            textColor: "text-orange-700"
         }
     ]
 
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="mb-8">
-                <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
-                    Tổng quan
-                </h2>
-                <p className="text-gray-600">
-                    Thống kê tổng quan về hệ thống
-                </p>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Tổng quan</h2>
+                    <p className="text-gray-600 mt-1">
+                        Thống kê tổng quan về hệ thống
+                    </p>
+                </div>
             </div>
 
             {/* Stats Cards */}
@@ -116,12 +182,12 @@ const DashboardTab = ({ orders, users, categories }) => {
                 ))}
             </div>
 
-            {/* Order Status Overview */}
+            {/* Order Status Overview - Cập nhật với 5 cột */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                     Trạng thái đơn hàng
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     <div className="text-center p-4 bg-yellow-50 rounded-lg">
                         <div className="text-2xl font-bold text-yellow-600">{stats.pendingOrders}</div>
                         <div className="text-sm text-yellow-700">Chờ xử lý</div>
@@ -130,9 +196,17 @@ const DashboardTab = ({ orders, users, categories }) => {
                         <div className="text-2xl font-bold text-blue-600">{stats.processingOrders}</div>
                         <div className="text-sm text-blue-700">Đang xử lý</div>
                     </div>
+                    <div className="text-center p-4 bg-purple-50 rounded-lg">
+                        <div className="text-2xl font-bold text-purple-600">{stats.shippedOrders}</div>
+                        <div className="text-sm text-purple-700">Đang giao</div>
+                    </div>
                     <div className="text-center p-4 bg-green-50 rounded-lg">
                         <div className="text-2xl font-bold text-green-600">{stats.completedOrders}</div>
                         <div className="text-sm text-green-700">Hoàn thành</div>
+                    </div>
+                    <div className="text-center p-4 bg-red-50 rounded-lg">
+                        <div className="text-2xl font-bold text-red-600">{stats.cancelledOrders}</div>
+                        <div className="text-sm text-red-700">Đã hủy</div>
                     </div>
                 </div>
             </div>
@@ -143,7 +217,10 @@ const DashboardTab = ({ orders, users, categories }) => {
                     <h3 className="text-lg font-semibold text-gray-900">
                         Đơn hàng gần đây
                     </h3>
-                    <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                    <button
+                        onClick={() => navigate("/admin/orders")}
+                        className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                    >
                         Xem tất cả
                     </button>
                 </div>
@@ -187,33 +264,18 @@ const DashboardTab = ({ orders, users, categories }) => {
                     Thao tác nhanh
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <button className="flex items-center p-4 text-left bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
-                        <svg className="w-6 h-6 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                        <span className="text-sm font-medium text-blue-700">Thêm đơn hàng</span>
-                    </button>
-
-                    <button className="flex items-center p-4 text-left bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
-                        <svg className="w-6 h-6 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        <span className="text-sm font-medium text-green-700">Thêm người dùng</span>
-                    </button>
-
-                    <button className="flex items-center p-4 text-left bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
-                        <svg className="w-6 h-6 text-purple-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                        </svg>
-                        <span className="text-sm font-medium text-purple-700">Thêm sản phẩm</span>
-                    </button>
-
-                    <button className="flex items-center p-4 text-left bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
-                        <svg className="w-6 h-6 text-orange-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                        </svg>
-                        <span className="text-sm font-medium text-orange-700">Thêm danh mục</span>
-                    </button>
+                    {quickActions.map((action, index) => (
+                        <button
+                            key={index}
+                            onClick={() => navigate(action.path)}
+                            className={`flex items-center p-4 text-left ${action.color} rounded-lg transition-colors`}
+                        >
+                            <svg className={`w-6 h-6 ${action.textColor.replace('text-', 'text-').replace('-700', '-600')} mr-3`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={action.icon} />
+                            </svg>
+                            <span className={`text-sm font-medium ${action.textColor}`}>{action.title}</span>
+                        </button>
+                    ))}
                 </div>
             </div>
         </div>

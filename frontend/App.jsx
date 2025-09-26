@@ -1,207 +1,89 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import { Toaster } from "react-hot-toast"
-
-// Pages
-import HomePage from "./pages/HomePage"
-import CartPage from "./pages/CartPage"
-import CheckoutPage from "./pages/CheckoutPage"
-import AdminPage from "./pages/AdminPage"
-import CategoriesPage from "./pages/CategoriesPage"
-import AccountPage from "./pages/AccountPage"
-
-// Components
-import { LoginModal } from "./components/modals/LoginModal"
-import { AddToCartModal } from "./components/modals/AddToCartModal"
-import { PageRouter } from "./components/common/PageRouter"
-
-// Hooks
-import { useAuth } from "./hooks/useAuth"
-import { useCart } from "./hooks/useCart"
-import { useCategories } from "./hooks/useCategories"
-import { useOrders } from "./hooks/useOrders"
+import { Routes, Route, useLocation } from "react-router-dom";
+import Header from "./components/Header";
+import Footer from "./components/Footer";
+import HomePage from "./pages/HomePage";
+import CategoriesPage from "./pages/CategoriesPage";
+import CartPage from "./pages/CartPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import AccountPage from "./pages/AccountPage";
+import AdminPage from "./pages/AdminPage";
+import ProtectedRoute from "./components/common/ProtectedRoute";
+import { useAppContext } from "./contexts/AppContext";
+import DashboardTab from "./components/admin/DashboardTab";
+import ProductsTab from "./components/admin/ProductsTab";
+import OrdersTab from "./components/admin/OrdersTab";
+import UsersTab from "./components/admin/UsersTab";
+import CategoriesTab from "./components/admin/CategoriesTab";
+import OrderPage from "./pages/OrderPage";
+import ScrollToTop from "./components/common/ScrollToTop";
+import ProductDetailPage from "./pages/ProductDetailPage";
 
 function App() {
-  const [currentPage, setCurrentPage] = useState("home")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState(null)
+  const location = useLocation();
+  const { cartCount, handleSearch } = useAppContext();
 
-  // Custom hooks
-  const auth = useAuth()
-  const cart = useCart()
-  const { categories, addCategory, updateCategory, deleteCategory } = useCategories()
-  const { orders, addOrder, updateOrderStatus, createOrder } = useOrders()
+  // Định nghĩa các trang có Header và Footer
+  const pagesWithLayout = ["/", "/categories", "/cart", "/account", "/checkout", "/orders", "/product/:id"];
 
-  // Scroll to top when navigating to Categories page
-  useEffect(() => {
-    if (currentPage === "categories") {
-      try {
-        window.scrollTo({ top: 0, left: 0, behavior: "smooth" })
-      } catch (_) {
-        window.scrollTo(0, 0)
-      }
+  // Kiểm tra trang hiện tại có cần Header/Footer không
+  const showLayout = pagesWithLayout.some((route) => {
+    if (route.includes(":id")) {
+      // route dynamic, kiểm tra pathname bắt đầu bằng base
+      const base = route.split("/:id")[0];
+      return location.pathname.startsWith(base);
     }
-  }, [currentPage])
-
-  // Navigation handlers
-  const handleSearch = (query) => {
-    setSearchQuery(query)
-    setCurrentPage("categories")
-  }
-
-  const navigateToCategory = (categoryId) => {
-    setSelectedCategory(categoryId)
-    setCurrentPage("categories")
-  }
-
-  // Enhanced order creation with cart integration
-  const handleCreateOrder = (orderData) => {
-    const selectedItems = cart.cart.filter((item) => item.selected)
-    const newOrder = createOrder({
-      ...orderData,
-      items: selectedItems,
-      total: cart.getTotalPrice(),
-    })
-
-    // Remove selected items from cart
-    cart.setCart(cart.cart.filter((item) => !item.selected))
-    return newOrder
-  }
-
-  // Page props factory
-  const getCommonProps = () => ({
-    setCurrentPage,
-    currentUser: auth.currentUser,
-    setShowLoginModal: auth.setShowLoginModal,
-    handleLogout: auth.handleLogout,
-    handleSearch,
-    cartCount: cart.getCartCount(),
-  })
-
-  const pageProps = {
-    home: {
-      ...getCommonProps(),
-      addToCart: (product) => cart.addToCart(product, auth.currentUser, auth.setShowLoginModal),
-      navigateToCategory,
-      categories,
-    },
-
-    cart: {
-      ...getCommonProps(),
-      cart: cart.cart,
-      removeFromCart: cart.removeFromCart,
-      removeSelectedFromCart: cart.removeSelectedFromCart,
-      updateQuantity: cart.updateQuantity,
-      toggleItemSelection: cart.toggleItemSelection,
-      getTotalPrice: cart.getTotalPrice,
-      getSelectedCount: cart.getSelectedCount,
-    },
-
-    checkout: {
-      ...getCommonProps(),
-      cart: cart.cart.filter((item) => item.selected),
-      getTotalPrice: cart.getTotalPrice,
-      createOrder: handleCreateOrder,
-    },
-
-    categories: {
-      ...getCommonProps(),
-      addToCart: (product) => cart.addToCart(product, auth.currentUser, auth.setShowLoginModal),
-      categories,
-      searchQuery,
-      selectedCategory,
-      setSelectedCategory,
-    },
-
-    account: {
-      ...getCommonProps(),
-      updateUser: auth.updateUser,
-      deleteUser: (id) => {
-        auth.setUsers(auth.users.filter((u) => u.id !== id))
-        if (auth.currentUser?.id === id) auth.setCurrentUser(null)
-        setCurrentPage("home")
-      },
-      handleLogout: () => {
-        auth.handleLogout()
-        setCurrentPage("home")
-      },
-    },
-
-    admin: {
-      ...getCommonProps(),
-      orders,
-      updateOrderStatus,
-      addOrder,
-      users: auth.users,
-      addUser: auth.addUser,
-      updateUser: auth.updateUser,
-      deleteUser: auth.deleteUser,
-      categories,
-      addCategory,
-      updateCategory,
-      deleteCategory,
-    },
-  }
+    return route === location.pathname;
+  });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <PageRouter
-        currentPage={currentPage}
-        pageProps={pageProps}
-        currentUser={auth.currentUser}
-      />
+    <div className="min-h-screen flex flex-col">
+      {/* Header - chỉ hiện ở các trang được chỉ định */}
+      {showLayout && (
+        <Header
+          cartCount={cartCount}
+          handleSearch={handleSearch}
+        />
+      )}
+      <ScrollToTop />
+      {/* Main content */}
+      <main className={showLayout ? "flex-1" : "min-h-screen"}>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/categories" element={<CategoriesPage />} />
+          <Route path="/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
+          <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
+          <Route path="/orders" element={<ProtectedRoute><OrderPage /></ProtectedRoute>} />
+          <Route path="/product/:id" element={<ProductDetailPage />} />
+          {/* Protected user route */}
+          <Route
+            path="/account"
+            element={<ProtectedRoute><AccountPage /></ProtectedRoute>}
+          />
 
-      {/* Modals */}
-      <LoginModal
-        showLoginModal={auth.showLoginModal}
-        setShowLoginModal={auth.setShowLoginModal}
-        showRegister={auth.showRegister}
-        setShowRegister={auth.setShowRegister}
-        handleLogin={(email, password) => auth.handleLogin(email, password, setCurrentPage)}
-        handleRegister={auth.handleRegister}
-      />
+          {/* Protected admin route */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminPage />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<DashboardTab />} />
+            <Route path="products" element={<ProductsTab />} />
+            <Route path="orders" element={<OrdersTab />} />
+            <Route path="users" element={<UsersTab />} />
+            <Route path="categories" element={<CategoriesTab />} />
+          </Route>
 
-      <AddToCartModal
-        showModal={cart.showAddToCartModal}
-        setShowModal={cart.setShowAddToCartModal}
-        selectedProduct={cart.selectedProduct}
-        selectedQuantity={cart.selectedQuantity}
-        setSelectedQuantity={cart.setSelectedQuantity}
-        confirmAddToCart={cart.confirmAddToCart}
-      />
+        </Routes>
+      </main>
 
-      {/* Toast Notifications */}
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: '#10B981',
-            color: '#fff',
-            fontSize: '14px',
-            borderRadius: '8px',
-            padding: '12px 16px',
-          },
-          success: {
-            iconTheme: {
-              primary: '#fff',
-              secondary: '#10B981',
-            },
-          },
-          error: {
-            style: {
-              background: '#EF4444',
-            },
-            iconTheme: {
-              primary: '#fff',
-              secondary: '#EF4444',
-            },
-          },
-        }}
-      />
+      {/* Footer - chỉ hiện ở các trang được chỉ định */}
+      {showLayout && <Footer />}
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

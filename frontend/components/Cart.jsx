@@ -28,7 +28,7 @@ const Cart = ({ cart, removeFromCart, updateQuantity, toggleItemSelection, getTo
             />
 
             <img
-              src={item.imageUrl || "/placeholder.svg"}
+              src={item.image_url || "/placeholder.svg"}
               alt={item.title}
               className="w-20 h-24 object-cover rounded"
             />

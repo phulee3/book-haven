@@ -1,68 +1,99 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import Header from "../components/Header"
-import Footer from "../components/Footer"
+import { useLocation } from "react-router-dom"
 import ProductCard from "../components/ProductCard"
-import { products } from "../data/products"
+import { useAppContext } from "../contexts/AppContext"
 
-function CategoriesPage({
-  setCurrentPage,
-  addToCart,
-  cartCount,
-  currentUser,
-  setShowLoginModal,
-  handleLogout,
-  handleSearch,
-  categories,
-  searchQuery,
-  selectedCategory,
-  setSelectedCategory,
-}) {
+function CategoriesPage() {
+  const {
+    products,
+    categories,
+    addToCart,
+
+    handleSearch,
+    searchQuery,
+    selectedCategory,
+    setSelectedCategory,
+  } = useAppContext()
+
+  const location = useLocation()
+
   const [sortBy, setSortBy] = useState("newest")
   const [page, setPage] = useState(1)
   const [showSidebar, setShowSidebar] = useState(false)
+  const [typeFilter, setTypeFilter] = useState("all") // NEW: all | combo | single
   const itemsPerPage = 8
 
+  // Đọc query ?type=combo | single
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const t = (params.get("type") || "").toLowerCase()
+    if (t === "combo") setTypeFilter("combo")
+    else if (t === "single") setTypeFilter("single")
+  }, [location.search])
+
   const filteredAndSortedProducts = useMemo(() => {
-    let filtered = products
+    let filtered = products || []
 
     // Filter by search query
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
-      filtered = products.filter((product) => {
-        const titleMatch = product.title.toLowerCase().includes(q)
+      filtered = (products || []).filter((product) => {
+        const title = (product.title || "").toLowerCase()
         const author = (product.author || "").toLowerCase()
-        const authorMatch = author.includes(q)
-        const words = q.split(" ")
-        const tokenMatch = words.some((w) => product.title.toLowerCase().includes(w) || author.includes(w))
-        return titleMatch || authorMatch || tokenMatch
+        if (!q) return true
+        if (title.includes(q) || author.includes(q)) return true
+        const words = q.split(" ").filter(Boolean)
+        return words.some(w => title.includes(w) || author.includes(w))
       })
     }
 
-    // Filter by category
-    if (selectedCategory) {
-      filtered = filtered.filter((product) => product.category === selectedCategory)
+    // Filter by category (chuẩn hóa so sánh string)
+    if (selectedCategory != null && selectedCategory !== "") {
+      const sel = String(selectedCategory)
+      filtered = filtered.filter(product => {
+        const prodCat =
+          product.category_id ??
+          product.categoryId ??
+          product.category?.id ??
+          product.category?._id ??
+          product.category
+        return prodCat != null && String(prodCat) === sel
+      })
+    }
+
+    // Lọc theo loại (combo / single)
+    if (typeFilter === "combo") {
+      filtered = filtered.filter(p =>
+        typeof p.title === "string" && /^combo\b/i.test(p.title.trim())
+      )
+    } else if (typeFilter === "single") {
+      filtered = filtered.filter(p =>
+        !(typeof p.title === "string" && /^combo\b/i.test(p.title.trim()))
+      )
     }
 
     // Sort products
     switch (sortBy) {
       case "newest":
         return [...filtered].sort(
-          (a, b) => new Date(b.createdAt || "2024-01-01") - new Date(a.createdAt || "2024-01-01"),
+          (a, b) =>
+            new Date(b.created_at || b.createdAt || 0) -
+            new Date(a.created_at || a.createdAt || 0)
         )
       case "priceDesc":
-        return [...filtered].sort((a, b) => b.price - a.price)
+        return [...filtered].sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0))
       case "priceAsc":
-        return [...filtered].sort((a, b) => a.price - b.price)
+        return [...filtered].sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0))
       default:
         return filtered
     }
-  }, [searchQuery, selectedCategory, sortBy])
+  }, [products, searchQuery, selectedCategory, sortBy, typeFilter])
 
   useEffect(() => {
     setPage(1)
-  }, [searchQuery, selectedCategory, sortBy])
+  }, [searchQuery, selectedCategory, sortBy, typeFilter])
 
   // Scroll to top when changing page, searching, or filtering
   useEffect(() => {
@@ -84,40 +115,33 @@ function CategoriesPage({
       return `Kết quả tìm kiếm: "${searchQuery}"`
     }
     if (selectedCategory) {
-      const keyToName = {
-        children: "Sách thiếu nhi",
-        "self-help": "Kỹ năng sống",
-        business: "Kinh doanh",
-        health: "Sức khỏe",
-      }
-      return keyToName[selectedCategory] || "Danh mục sách"
+      const category = categories?.find(cat => cat.id === selectedCategory)
+      return category ? category.name : "Danh mục sách"
     }
     return "Tất cả sách"
   }
 
-  const handleCategorySelect = (category) => {
-    setSelectedCategory(category)
-    setShowSidebar(false) // Close sidebar on mobile after selection
+  const handleCategorySelect = (categoryId) => {
+    // Nhấn lại cùng danh mục để bỏ chọn
+    setSelectedCategory(prev =>
+      String(prev) === String(categoryId) ? null : categoryId
+    )
+    setShowSidebar(false)
   }
 
-  const categoryButtons = [
-    { key: null, name: "Tất cả sách" },
-    { key: "children", name: "Sách thiếu nhi" },
-    { key: "self-help", name: "Kỹ năng sống" },
-    { key: "business", name: "Kinh doanh" },
-    { key: "health", name: "Sức khỏe" },
-  ]
+  const categoryButtons = useMemo(() => {
+    const buttons = [{ key: null, name: "Tất cả sách" }]
+    if (Array.isArray(categories)) {
+      categories.forEach(cat => {
+        const cid = cat.id ?? cat._id
+        buttons.push({ key: cid != null ? String(cid) : null, name: cat.name || cat.title || "Danh mục" })
+      })
+    }
+    return buttons
+  }, [categories])
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header
-        setCurrentPage={setCurrentPage}
-        cartCount={cartCount}
-        currentUser={currentUser}
-        setShowLoginModal={setShowLoginModal}
-        handleLogout={handleLogout}
-        handleSearch={handleSearch}
-      />
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         {/* Mobile Filter Toggle */}
@@ -153,18 +177,23 @@ function CategoriesPage({
               <h3 className="text-lg font-semibold mb-4 hidden lg:block">Danh mục sách</h3>
 
               <div className="space-y-2">
-                {categoryButtons.map((category) => (
-                  <button
-                    key={category.key || 'all'}
-                    onClick={() => handleCategorySelect(category.key)}
-                    className={`w-full text-left px-3 py-2.5 sm:py-2 rounded-md transition-colors text-sm sm:text-base ${selectedCategory === category.key && !searchQuery
+                {categoryButtons.map((category) => {
+                  const isActive =
+                    (selectedCategory == null && category.key == null) ||
+                    (selectedCategory != null && category.key != null && String(selectedCategory) === String(category.key))
+                  return (
+                    <button
+                      key={category.key === null ? 'all' : category.key}
+                      onClick={() => handleCategorySelect(category.key)}
+                      className={`w-full text-left px-3 py-2.5 sm:py-2 rounded-md transition-colors text-sm sm:text-base ${isActive && !searchQuery
                         ? "bg-blue-100 text-blue-700 font-medium"
                         : "hover:bg-gray-100 text-gray-700"
-                      }`}
-                  >
-                    {category.name}
-                  </button>
-                ))}
+                        }`}
+                    >
+                      {category.name}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -182,17 +211,32 @@ function CategoriesPage({
                 </p>
               </div>
 
-              <div className="flex items-center space-x-2 w-full sm:w-auto">
-                <span className="text-sm text-gray-600 whitespace-nowrap">Sắp xếp theo:</span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="flex-1 sm:flex-none min-w-0 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                >
-                  <option value="newest">Mới nhất</option>
-                  <option value="priceDesc">Giá giảm dần</option>
-                  <option value="priceAsc">Giá tăng dần</option>
-                </select>
+              <div className="flex items-center flex-wrap gap-3 w-full sm:w-auto">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600 whitespace-nowrap">Sắp xếp:</span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="newest">Mới nhất</option>
+                    <option value="priceDesc">Giá giảm dần</option>
+                    <option value="priceAsc">Giá tăng dần</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600 whitespace-nowrap">Loại:</span>
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="all">Tất cả</option>
+                    <option value="combo">Combo</option>
+                    <option value="single">Sách đơn</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -241,8 +285,8 @@ function CategoriesPage({
                                 key={pageNum}
                                 onClick={() => setPage(pageNum)}
                                 className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${page === pageNum
-                                    ? "bg-blue-600 text-white"
-                                    : "border border-gray-300 hover:bg-gray-100"
+                                  ? "bg-blue-600 text-white"
+                                  : "border border-gray-300 hover:bg-gray-100"
                                   }`}
                               >
                                 {pageNum}
@@ -291,8 +335,6 @@ function CategoriesPage({
           </div>
         </div>
       </div>
-
-      <Footer />
     </div>
   )
 }
